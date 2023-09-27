@@ -504,6 +504,7 @@ sys_pipe(void)
   return 0;
 }
 
+// Returns the number of files open in the current process.
 uint64
 sys_getfilenum(int pid)
 {
