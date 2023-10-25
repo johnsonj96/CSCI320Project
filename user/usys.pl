@@ -40,3 +40,4 @@ entry("getfilenum");
 entry("settickets");
 entry("getpinfo");
 entry("puptime");
+entry("pgaccess");

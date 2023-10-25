@@ -27,6 +27,7 @@ int getfilenum(int pid);
 int settickets(int number);
 int getpinfo(void);
 int puptime(int pid);
+int pgaccess(const char*, int pages, const int*);
 
 // ulib.c
 int stat(const char*, struct stat*);

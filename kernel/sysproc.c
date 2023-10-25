@@ -115,3 +115,15 @@ sys_puptime(void)
   struct pstat *ps = mypstat();
   return puptime(ps,pid);
 }
+
+int
+sys_pgaccess(void)
+{
+  uint64 addr;
+  int pages;
+  uint64 buffer;
+  argaddr(0, &addr);
+  argint(1, &pages);
+  argaddr(2, &buffer);
+  return pgaccess(addr,pages,buffer);
+}

@@ -803,3 +803,25 @@ procdump(void)
     printf("\n");
   }
 }
+
+int
+pgaccess(uint64 addr, int pages, uint64 buffer) {
+	pte_t *pte;
+	struct proc *p = myproc();
+	if (pages > 32) {
+		pages = 32;
+	}
+	char tempbuffer[1+pages/8];
+	for (int i=0; i<1+pages/8; i++) {
+		tempbuffer[i] = 0;
+	}
+	for (int i=0; i<pages; i++) {
+		pte = walk(p->pagetable,addr+(i*PGSIZE),0);
+		if ((*pte & PTE_A) != 0) {
+			tempbuffer[i/8] = tempbuffer[i/8] | (1<<(i%8));
+			*pte &= ~PTE_A;
+		}
+	}
+	copyout(p->pagetable,buffer,tempbuffer,pages);
+	return 0;
+}

@@ -24,3 +24,4 @@
 #define SYS_settickets 23
 #define SYS_getpinfo   24
 #define SYS_puptime    25
+#define SYS_pgaccess   26
