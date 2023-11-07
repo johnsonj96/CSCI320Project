@@ -269,6 +269,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   ps->inuse[pstatid] = 0;
+  ticketnum -= ps->tickets[pstatid];
   ps->tickets[pstatid] = 0;
 }
 
@@ -454,7 +455,6 @@ void
 exit(int status)
 {
   struct proc *p = myproc();
-  struct pstat *ps = mypstat();
 
   if(p == initproc)
     panic("init exiting");
@@ -485,9 +485,7 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
-  int pstatid = getpsid(p->pid);
-  ticketnum -= ps->tickets[pstatid];
-
+  settickets(0);
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
@@ -565,30 +563,26 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-	curticket = scaled_random(0,NPROC);
-	for(p = proc; p < &proc[NPROC] && curticket > -1; p++) {
+	curticket = scaled_random(1,ticketnum);
+	for (p = proc; p < &proc[NPROC] && curticket > 0; p++) {
 	  acquire(&p->lock);
-	  curticket--;
-      if(p->state == RUNNABLE) {
+      if (p->state == RUNNABLE || p->state == SLEEPING) {
+		// Switch to chosen process.  It is the process's job
+		// to release its lock and then reacquire it
+		// before jumping back to us.
+		c->proc = p;
+		pstatid = getpsid(p->pid);
+		curticket -= ps->tickets[pstatid];
 		if (curticket <= 0) {
-          // Switch to chosen process.  It is the process's job
-          // to release its lock and then reacquire it
-          // before jumping back to us.
-		  pstatid = getpsid(p->pid);
-		  curticket = ps->tickets[pstatid];
-		  c->proc = p;
-          while (curticket > 0 && (p->state == RUNNABLE || p->state == SLEEPING)) {
 			p->state = RUNNING;
 			ps->ticks[pstatid]++;
 			swtch(&c->context, &p->context);
-			curticket--;
-		  }
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
 		}
-      }
-	  release(&p->lock);
+		// Process is done running for now.
+		// It should have changed its p->state before coming back.
+		c->proc = 0;
+	  }
+      release(&p->lock);
 	}
   }
 }
@@ -819,7 +813,7 @@ pgaccess(uint64 addr, int pages, uint64 buffer) {
 		pte = walk(p->pagetable,addr+(i*PGSIZE),0);
 		if ((*pte & PTE_A) != 0) {
 			tempbuffer[i/8] = tempbuffer[i/8] | (1<<(i%8));
-			*pte &= ~PTE_A;
+			*pte ^= PTE_A;
 		}
 	}
 	copyout(p->pagetable,buffer,tempbuffer,pages);
