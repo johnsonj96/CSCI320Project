@@ -577,6 +577,7 @@ scheduler(void)
 			p->state = RUNNING;
 			ps->ticks[pstatid]++;
 			swtch(&c->context, &p->context);
+			curticket += ticketnum;
 		}
 		// Process is done running for now.
 		// It should have changed its p->state before coming back.
